@@ -1,14 +1,13 @@
 package mx.edu.j2se.hernandezv.CarRentalSystem.Model;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
+import javax.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
+@Table
 public class Booking {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int reservationId;
 
     @ManyToOne
@@ -21,8 +20,19 @@ public class Booking {
 
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-    private int totalPrice;
+    private float totalPrice;
     private char retrieved;
+
+    public Booking(){}
+
+    public Booking(User user, Car car, LocalDateTime startTime, LocalDateTime endTime, float totalPrice, char retrieved) {
+        this.user = user;
+        this.car = car;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.totalPrice = totalPrice;
+        this.retrieved = retrieved;
+    }
 
     public int getReservationId() {
         return reservationId;
@@ -64,7 +74,7 @@ public class Booking {
         this.endTime = endTime;
     }
 
-    public int getTotalPrice() {
+    public float getTotalPrice() {
         return totalPrice;
     }
 

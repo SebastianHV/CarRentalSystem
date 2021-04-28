@@ -3,6 +3,7 @@ package mx.edu.j2se.hernandezv.CarRentalSystem.WebController;
 import mx.edu.j2se.hernandezv.CarRentalSystem.CarRentalService.BookingService;
 import mx.edu.j2se.hernandezv.CarRentalSystem.CarRentalService.CarRentalService;
 import mx.edu.j2se.hernandezv.CarRentalSystem.CarRentalService.UserService;
+import mx.edu.j2se.hernandezv.CarRentalSystem.Model.BookCar;
 import mx.edu.j2se.hernandezv.CarRentalSystem.Model.Booking;
 import mx.edu.j2se.hernandezv.CarRentalSystem.Model.Car;
 import mx.edu.j2se.hernandezv.CarRentalSystem.Model.User;
@@ -10,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -57,11 +59,11 @@ public class WebControl {
         Iterable<Car> carList = null;
         try {
             if (carClass == null) carList = carRentalService.getAvailableCars(startTime, endTime);
-            carList = carRentalService.getAvailableCars(startTime , endTime, carClass);
+            else carList = carRentalService.getAvailableCars(startTime , endTime, carClass);
             responseEntity = new ResponseEntity<Iterable<Car>>(carList, HttpStatus.OK);
         } catch (Exception e) {
             String errorMessage = environment.getProperty(e.getMessage());
-            throw new ResponseStatusException(HttpStatus.NO_CONTENT, errorMessage);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, errorMessage);
         }
         return responseEntity;
     }
@@ -80,4 +82,36 @@ public class WebControl {
 
         return  responseEntity;
     }
+
+    @PostMapping(
+            value = "/bookCar",
+            consumes = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE},
+            produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
+    public ResponseEntity<Booking> bookCar(@RequestBody BookCar bookCar) throws Exception {
+        ResponseEntity<Booking> responseEntity = null;
+        try {
+            Booking reservation = carRentalService.bookCar(bookCar.getUserId(), bookCar.getCarId(), bookCar.getStartTime(), bookCar.getEndTime());
+            responseEntity = new ResponseEntity<Booking>(reservation, HttpStatus.OK);
+        } catch (Exception e) {
+            String errorMessage = environment.getProperty(e.getMessage());
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, errorMessage);
+        }
+        return responseEntity;
+    }
+
+    @PostMapping(value = "/returnCar",
+            consumes = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE},
+            produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE})
+    public ResponseEntity<Integer> returnCar(@RequestBody Booking reservation){
+        ResponseEntity<Integer> responseEntity = null;
+        try {
+            Integer returnCar = carRentalService.returnCar(reservation);
+            responseEntity = new ResponseEntity<Integer>(returnCar, HttpStatus.OK);
+        } catch (Exception e) {
+            String errorMessage = environment.getProperty(e.getMessage());
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, errorMessage);
+        }
+        return  responseEntity;
+    }
+
 }

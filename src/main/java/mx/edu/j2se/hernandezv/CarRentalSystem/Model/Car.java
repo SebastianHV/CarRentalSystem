@@ -1,11 +1,9 @@
 package mx.edu.j2se.hernandezv.CarRentalSystem.Model;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
+import javax.persistence.*;
 
 @Entity
+@Table
 public class Car {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)

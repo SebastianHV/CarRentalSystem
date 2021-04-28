@@ -1,20 +1,25 @@
 package mx.edu.j2se.hernandezv.CarRentalSystem.CarRentalService;
 
+import mx.edu.j2se.hernandezv.CarRentalSystem.CarRentalDAO.CarRentalDAO;
 import mx.edu.j2se.hernandezv.CarRentalSystem.Model.Booking;
 import mx.edu.j2se.hernandezv.CarRentalSystem.Model.Car;
+import mx.edu.j2se.hernandezv.CarRentalSystem.Model.User;
 import mx.edu.j2se.hernandezv.CarRentalSystem.Repository.BookingRepository;
 import mx.edu.j2se.hernandezv.CarRentalSystem.Repository.CarRepository;
 import mx.edu.j2se.hernandezv.CarRentalSystem.Repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.transaction.Transactional;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service(value = "carRentalService")
+@Transactional
 public class CarRentalServiceImpl implements CarRentalService {
 
     @Autowired
@@ -25,6 +30,9 @@ public class CarRentalServiceImpl implements CarRentalService {
 
     @Autowired
     BookingRepository bookingRepository;
+
+    @Autowired
+    CarRentalDAO carRentalDAO;
 
 
     @Override
@@ -45,8 +53,8 @@ public class CarRentalServiceImpl implements CarRentalService {
 //
 //        ).map(booking -> booking.getCar()).collect(Collectors.toList());
 
-        reservedCarList = (List<Car>) getBookedCarsByTime(startTime, endTime);
-
+//        reservedCarList = (List<Car>) getBookedCarsByTime(startTime, endTime);
+        reservedCarList = (List<Car>) carRentalDAO.getBookedCarsByTime(startTime, endTime);
 
         List<Car> returnCarList = new ArrayList<>();
         carList.removeAll(reservedCarList);
@@ -63,7 +71,8 @@ public class CarRentalServiceImpl implements CarRentalService {
         carList = carRepository.findAll();
 
         List<Car> reservedCarList = new ArrayList<>();
-        reservedCarList = (List<Car>) getBookedCarsByTime(startTime, endTime);
+//        reservedCarList = (List<Car>) getBookedCarsByTime(startTime, endTime);
+        reservedCarList = (List<Car>) carRentalDAO.getBookedCarsByTime(startTime, endTime);
 
         List<Car> returnCarList = new ArrayList<>();
         carList.removeAll(reservedCarList);
@@ -79,14 +88,54 @@ public class CarRentalServiceImpl implements CarRentalService {
         throw new Exception("Service.RESERVATION_NOT_FOUND");
     }
 
+    @Override
+    public Booking bookCar(int userId, int carId, LocalDateTime startTime, LocalDateTime endTime) throws Exception {
+        Optional<User> optionalUser = userRepository.findById(userId);
+        User user;
+        if (optionalUser.isPresent())
+            user = optionalUser.get();
+        else
+            throw new Exception("DAO.USER_NOT_FOUND");
+
+        Optional<Car> optionalCar = carRepository.findById(carId);
+        Car car;
+        if (optionalCar.isPresent())
+            car = optionalCar.get();
+        else
+            throw new Exception("DAO.CAR_NOT_FOUND");
+
+        List<Car> bookedCars = new ArrayList<>();
+        bookedCars = (List<Car>) getBookedCarsByTime(startTime, endTime);
+
+        if (car.getAvailability() == 'Y' && bookedCars.contains(car) == false){
+//            int days = (int) ChronoUnit.DAYS.between(startTime, endTime);
+//            float totalPrice = car.getPricePerDay() * days;
+//            Booking newBooking = new Booking(user, car, startTime, endTime, totalPrice, 'N');
+//            newBooking = bookingRepository.save(newBooking);
+//            return newBooking;
+            Booking newReservation = carRentalDAO.carReservation(userId, carId, startTime, endTime);
+            return newReservation;
+        } else
+            throw new Exception("Service.CAR_UNAVAILABLE");
+    }
+
+    @Override
+    public Integer returnCar(Booking reservation) throws Exception {
+        Booking currentReservation = carRentalDAO.getReservation(reservation.getReservationId());
+        if (currentReservation.getRetrieved() == 'Y') throw new Exception("Service.CAR_ALREADY_RETURNED");
+        Integer returnedCar = carRentalDAO.returnCar(reservation);
+        if (returnedCar == 0) throw new Exception("DAO.UPDATE_WENT_WRONG");
+        return returnedCar;
+    }
+
     public Iterable<Car> getBookedCarsByTime(LocalDateTime startTime, LocalDateTime endTime){
         List<Booking> bookedCarsList = new ArrayList<>();
         bookedCarsList = bookingRepository.findAll();
 
         List<Car> filteredList = new ArrayList<>();
         filteredList = bookedCarsList.stream().filter(booking ->
-                ( ( startTime.isAfter(booking.getStartTime()) && startTime.isBefore(booking.getEndTime()) )
-                        || ( endTime.isAfter(booking.getStartTime()) && endTime.isBefore(booking.getEndTime()) )
+                ( ( booking.getStartTime().isAfter(startTime) && booking.getStartTime().isBefore(endTime) )
+                        || ( booking.getEndTime().isAfter(startTime) && booking.getEndTime().isBefore(endTime) )
                         || startTime.isEqual(booking.getStartTime()) || startTime.isEqual(booking.getEndTime())
                         || endTime.isEqual(booking.getStartTime()) || endTime.isEqual(booking.getEndTime()) )
                         && ( booking.getRetrieved() == 'N' )
